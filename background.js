@@ -23,6 +23,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   } else if (message.command === 'stop') {
     stopSearching();
   }
+  // Keep the message channel open for asynchronous response
+  return true;
 });
 
 function startSearching(searchCount) {
@@ -75,8 +77,11 @@ async function performSearch() {
     try {
       await chrome.tabs.get(bingTabId);
       chrome.tabs.update(bingTabId, { url: homeUrl, active: false }, (tab) => {
-        // Wait for the tab to load before sending the message
-        waitForTabAndType(tab.id);
+        if (chrome.runtime.lastError) {
+          createNewTabAndType(homeUrl);
+        } else {
+          waitForTabAndType(tab.id);
+        }
       });
     } catch (e) {
       createNewTabAndType(homeUrl);
@@ -95,9 +100,10 @@ function createNewTabAndType(url) {
 
 function waitForTabAndType(tabId) {
   const listener = (updatedTabId, changeInfo, tab) => {
-    if (updatedTabId === tabId && changeInfo.status === 'complete') {
+    if (updatedTabId === tabId && changeInfo.status === 'complete' && tab.url.startsWith("https://www.bing.com")) {
       const randomKeyword = keywords[Math.floor(Math.random() * keywords.length)];
-      chrome.tabs.sendMessage(tabId, { command: 'type-search', keyword: randomKeyword });
+      
+      chrome.tabs.sendMessage(tabId, { command: 'type-search', keyword: randomKeyword }).catch(err => console.warn("Content script might not be ready yet:", err));
 
       searchesCompleted++;
       chrome.storage.local.set({ searchesCompleted: searchesCompleted });
@@ -105,16 +111,17 @@ function waitForTabAndType(tabId) {
       updatePopup();
       scheduleNextSearch();
 
-      // Remove the listener to avoid it firing multiple times
       chrome.tabs.onUpdated.removeListener(listener);
     }
   };
   chrome.tabs.onUpdated.addListener(listener);
 }
 
-
 function updatePopup() {
-  chrome.runtime.sendMessage({ statusUpdate: true });
+  // We send a message to the popup to update its status.
+  // This will fail if the popup is not open, so we add an empty catch block
+  // to prevent an "Uncaught (in promise)" error from appearing in the console.
+  chrome.runtime.sendMessage({ statusUpdate: true }).catch(() => {});
 }
 
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
