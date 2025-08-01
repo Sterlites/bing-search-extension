@@ -10,6 +10,45 @@ let searchesCompleted = 0;
 let totalSearches = 0;
 let isRunning = false;
 
+// --- Daily Reminder Logic ---
+const DAILY_REMINDER_ALARM = 'dailyReminderAlarm';
+
+// Check usage when the extension is first installed or the browser starts
+chrome.runtime.onStartup.addListener(checkDailyUsage);
+chrome.runtime.onInstalled.addListener(() => {
+  // Schedule the daily check
+  chrome.alarms.create(DAILY_REMINDER_ALARM, {
+    periodInMinutes: 60 * 24 // Check once every 24 hours
+  });
+  checkDailyUsage();
+});
+
+// Listener for the daily alarm
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === DAILY_REMINDER_ALARM) {
+    checkDailyUsage();
+  } else if (alarm.name === 'bingSearchAlarm') {
+    performSearch();
+  }
+});
+
+async function checkDailyUsage() {
+  const { lastRunDate } = await chrome.storage.local.get('lastRunDate');
+  const today = new Date().toLocaleDateString();
+
+  if (lastRunDate !== today) {
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon128.png',
+      title: 'Time for a Bing Search!',
+      message: 'You haven\'t run your Bing searches today. Click the extension icon to start.',
+      priority: 2
+    });
+  }
+}
+
+// --- Core Search Logic ---
+
 // Initialize state from storage
 chrome.storage.local.get(['isRunning', 'searchesCompleted', 'totalSearches'], (result) => {
   isRunning = result.isRunning || false;
@@ -23,7 +62,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   } else if (message.command === 'stop') {
     stopSearching();
   }
-  // Keep the message channel open for asynchronous response
   return true;
 });
 
@@ -35,7 +73,10 @@ function startSearching(searchCount) {
   isRunning = true;
   searchesCompleted = 0;
   totalSearches = searchCount;
-  chrome.storage.local.set({ isRunning: true, searchesCompleted: 0, totalSearches: searchCount });
+  // Store the current date to mark that we've run today
+  const today = new Date().toLocaleDateString();
+  chrome.storage.local.set({ isRunning: true, searchesCompleted: 0, totalSearches: searchCount, lastRunDate: today });
+  
   console.log(`Starting to perform ${totalSearches} searches.`);
   scheduleNextSearch();
 }
@@ -57,16 +98,10 @@ function scheduleNextSearch() {
     stopSearching();
     return;
   }
-  const randomDelay = Math.floor(Math.random() * (15 - 5 + 1) + 5); // 5 to 15 seconds
+  const randomDelay = Math.floor(Math.random() * (15 - 5 + 1) + 5);
   chrome.alarms.create('bingSearchAlarm', { delayInMinutes: randomDelay / 60 });
   console.log(`Scheduled next search in ${randomDelay} seconds.`);
 }
-
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'bingSearchAlarm') {
-    performSearch();
-  }
-});
 
 async function performSearch() {
   if (!isRunning) return;
@@ -118,9 +153,6 @@ function waitForTabAndType(tabId) {
 }
 
 function updatePopup() {
-  // We send a message to the popup to update its status.
-  // This will fail if the popup is not open, so we add an empty catch block
-  // to prevent an "Uncaught (in promise)" error from appearing in the console.
   chrome.runtime.sendMessage({ statusUpdate: true }).catch(() => {});
 }
 
