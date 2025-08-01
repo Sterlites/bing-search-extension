@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bing Search Automator</title>
+  <link rel="stylesheet" type="text/css" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Bing Search Automator</h1>
+    <p>Enter the number of searches to perform and press Start.</p>
+    <div class="settings">
+      <label for="search-count">Number of Searches:</label>
+      <input type="number" id="search-count" value="10" min="1">
+    </div>
+    <div class="controls">
+      <button id="start-button">Start</button>
+      <button id="stop-button">Stop</button>
+    </div>
+    <div id="status">Status: Idle</div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

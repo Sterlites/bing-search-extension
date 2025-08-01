@@ -1,0 +1,22 @@
+const keywords = [
+  "JavaScript frameworks",
+  "CSS grid vs flexbox",
+  "React hooks tutorial",
+  "Node.js performance optimization",
+  "Python data science libraries",
+  "Machine learning algorithms",
+  "Docker containerization",
+  "Kubernetes architecture",
+  "Serverless computing pros and cons",
+  "GraphQL vs REST",
+  "WebAssembly use cases",
+  "Progressive Web Apps (PWAs)",
+  "Rust programming language features",
+  "Go concurrency patterns",
+  "Cybersecurity best practices",
+  "Ethical hacking techniques",
+  "Cloud computing services comparison",
+  "AWS vs Azure vs Google Cloud",
+  "DevOps automation tools",
+  "CI/CD pipeline tutorial"
+];
